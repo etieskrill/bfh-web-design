@@ -15,8 +15,7 @@ public class Main {
     public static void main(String[] args) throws IOException {
         ServerSocket serverSocket = new ServerSocket(8080);
 
-        int connects = 0;
-        while (connects <= 10) {
+        while (true) {
             try (Socket socket = serverSocket.accept()) {
                 PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
                 Scanner scanner = new Scanner(socket.getInputStream());
@@ -30,11 +29,7 @@ public class Main {
                     return;
                 }
             }
-
-            connects++;
         }
-
-        serverSocket.close();
     }
 
     public enum Method {
@@ -73,7 +68,7 @@ public class Main {
         final String[] tokens = request.split(" ");
         if (tokens.length != 3) {
             System.out.println("Bad request: " + request);
-            writeResponse(writer, ReturnCode.BAD_REQUEST, null, "");
+            writeResponse(writer, ReturnCode.BAD_REQUEST);
             return;
         }
 
@@ -81,12 +76,12 @@ public class Main {
         try {
             method = Method.valueOf(tokens[0]);
         } catch (IllegalArgumentException e) {
-            writeResponse(writer, ReturnCode.BAD_REQUEST, null, null);
+            writeResponse(writer, ReturnCode.BAD_REQUEST);
             return;
         }
 
         if (method != Method.GET) {
-            writeResponse(writer, ReturnCode.NOT_ALLOWED, null, null);
+            writeResponse(writer, ReturnCode.NOT_ALLOWED);
             return;
         }
 
@@ -96,7 +91,7 @@ public class Main {
         File file = new File(fileName);
 
         if (!file.exists()) {
-            writeResponse(writer, ReturnCode.NOT_FOUND, null, null);
+            writeResponse(writer, ReturnCode.NOT_FOUND);
             return;
         }
 
@@ -123,7 +118,7 @@ public class Main {
         } else if (file.isDirectory()) {
             File[] files = file.listFiles((dir, name) -> name.equals("index.html"));
             if (files == null || files.length == 0) {
-                writeResponse(writer, ReturnCode.SUCCESS, null, null);
+                writeResponse(writer, ReturnCode.SUCCESS);
                 return;
             }
             try {
@@ -142,15 +137,21 @@ public class Main {
             }
         }
 
-        writeResponse(writer, ReturnCode.SUCCESS, null, null);
+        writeResponse(writer, ReturnCode.SUCCESS);
     }
 
     private static final Random random = new Random();
     private static int count;
 
+    static void writeResponse(PrintWriter writer, ReturnCode code) {
+        writeResponse(writer, code, null, null);
+    }
+    
     static void writeResponse(PrintWriter writer, ReturnCode code, String[] headers, String body) {
-        if (random.nextInt() * 100 < 0.01 || ++count > 100) {
-            writeResponse(writer, ReturnCode.TEAPOT, null, "");
+        if (random.nextFloat() < 0.05 || ++count > 100) {
+            code = ReturnCode.TEAPOT;
+            headers = null;
+            body = null;
             if (count > 100) count = 0;
         }
 
