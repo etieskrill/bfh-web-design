@@ -1,6 +1,6 @@
 ### IntelliJ IDEA ###
 /.idea
-da-server.iml
+*.iml
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/

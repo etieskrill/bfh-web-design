@@ -1,0 +1,29 @@
+body {
+    margin: 5% 15%;
+}
+
+h1, h2, h3 {
+    font-family: "Garamond";
+}
+
+h1 {
+    font-size: 300%;
+}
+
+h2 {
+    font-size: 200%;
+}
+
+p, li {
+    font-family: "Trebuchet MS";
+}
+
+header {
+    text-align: center;
+}
+
+header li {
+    margin-left: 45%;
+    text-align: left;
+    list-style-position: inside;
+}

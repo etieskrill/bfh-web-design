@@ -1,13 +1,15 @@
+package org.bfh.brate.web;
+
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
-import java.util.Random;
 import java.util.Scanner;
 
-public class Main {
+public class SimpleServer {
 
     public static final int CHAR_BYTE_LEN = 1;
     public static final String CONTENT_ROOT = "./content";
@@ -23,7 +25,7 @@ public class Main {
                 if (scanner.hasNextLine()) {
                     String request = scanner.nextLine();
                     System.out.println("Processing request: \"" + request + "\"");
-                    parseRequest(request, writer);
+                    parseRequest(request, socket.getOutputStream(), writer);
                 } else {
                     System.err.println("No request received");
                     return;
@@ -64,7 +66,7 @@ public class Main {
         }
     }
 
-    static void parseRequest(String request, PrintWriter writer) {
+    static void parseRequest(String request, OutputStream output, PrintWriter writer) {
         final String[] tokens = request.split(" ");
         if (tokens.length != 3) {
             System.out.println("Bad request: " + request);
@@ -97,16 +99,19 @@ public class Main {
 
         if (file.isFile()) {
             try {
-                String content = Files.readString(file.toPath()); //TODO check earlier
-                writeResponse(writer,
+                byte[] content = Files.readAllBytes(file.toPath());
+                writeResponse(writer, output,
                         ReturnCode.SUCCESS,
                         new String[]{
-                                "Content-Length: " + content.length(),
+                                "Content-Length: " + content.length,
                                 "Content-Type: " + switch (fileEnding) {
                                     case "html" -> "text/html";
+                                    case "css" -> "text/css";
                                     case "txt" -> "text/plain";
+                                    case "jpg", "jpeg" -> "image/jpg";
+                                    case "png" -> "image/png";
                                     default -> throw new UnsupportedOperationException(
-                                            "Cannot parse file of type" + fileEnding);
+                                            "Cannot parse file of type " + fileEnding);
                                 }
                         },
                         content
@@ -122,11 +127,11 @@ public class Main {
                 return;
             }
             try {
-                String content = Files.readString(files[0].toPath());
-                writeResponse(writer,
+                byte[] content = Files.readAllBytes(files[0].toPath());
+                writeResponse(writer, output,
                         ReturnCode.SUCCESS,
                         new String[]{
-                                "Content-Length: " + CHAR_BYTE_LEN * content.length(),
+                                "Content-Length: " + CHAR_BYTE_LEN * content.length,
                                 "Content-Type: text/html"
                         },
                         content
@@ -140,28 +145,25 @@ public class Main {
         writeResponse(writer, ReturnCode.SUCCESS);
     }
 
-    private static final Random random = new Random();
-    private static int count;
-
     static void writeResponse(PrintWriter writer, ReturnCode code) {
-        writeResponse(writer, code, null, null);
+        writeResponse(writer, null, code, null, null);
     }
     
-    static void writeResponse(PrintWriter writer, ReturnCode code, String[] headers, String body) {
-        if (random.nextFloat() < 0.05 || ++count > 100) {
-            code = ReturnCode.TEAPOT;
-            headers = null;
-            body = null;
-            if (count > 100) count = 0;
-        }
-
+    static void writeResponse(PrintWriter writer, OutputStream output, ReturnCode code, String[] headers, byte[] body) {
         writer.println("HTTP/1.1 %d %s".formatted(code.getCode(), code.getMessage()));
         if (headers != null) {
             for (String header : headers)
                 writer.println(header);
         }
         writer.println();
-        if (body != null) writer.println(body);
+        
+        if (body != null) {
+            try {
+                output.write(body);
+            } catch (IOException e) {
+                System.err.println("Failed to write to response: " + e.getMessage());
+            }
+        }
     }
 
 }
